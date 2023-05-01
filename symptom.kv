@@ -1,0 +1,111 @@
+<CheckboxLabel@BoxLayout>:
+    orientation: 'horizontal'
+    CheckBox:
+        size_hint_x: None
+        width: '48dp'
+    Label:
+        text: ''
+        text_size: self.size
+        valign: 'middle'
+<ToggleButton>:
+    background_color: (0.8, 0.8, 0.8, 1) if self.state == "normal" else (0.2, 0.6, 0.8, 1)
+    color: (0, 0, 0, 1) if self.state == "normal" else (1, 1, 1, 1)
+
+<SymptomsScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        padding: [0, 0, 0, 0]
+        Label:
+            text: 'Select all the following symptoms you have experienced over the past week:'
+            size_hint_y: None
+            height: '48dp'
+            text_size: self.size
+            valign: 'top'
+        ScrollView:
+            GridLayout:
+                id: symptoms_grid
+                cols: 1
+                size_hint_y: None
+                height: self.minimum_height
+                spacing: 10
+                padding: 10
+                row_force_default: True
+                row_default_height: 60
+        Button:
+            text: "Next"
+            on_release: root.next_screen()
+            size_hint_y: 0.1
+
+
+
+<FrequencyScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+        Label:
+            text: 'Now indicate how often you have experienced each symptom over the past week'
+            size_hint_y: None
+            height: '48dp'
+            text_size: self.size
+            valign: 'middle'
+        ScrollView:
+            GridLayout:
+                id: symptom_layout
+                cols: 1
+                size_hint_y: None
+                height: self.minimum_height
+                spacing: 10
+                padding: 10
+
+<CustomToggleButton@ToggleButton>:
+    background_color: (0, 0, 1, 1) if self.state == 'down' else (0.7, 0.7, 0.7, 1)
+    color: (1, 1, 1, 1) if self.state == 'down' else (0, 0, 0, 1)
+    size_hint_x: None
+    width: self.texture_size[0] + dp(20)
+    text_size: self.width - dp(10), None
+    halign: 'center'
+    valign: 'middle'
+
+
+<InterferenceScreen>:
+    name: 'interference'
+    BoxLayout:
+        orientation: 'vertical'
+        Label:
+            text: 'When you experience each symptom how intense is it?'
+            size_hint_y: None
+            height: '48dp'
+            text_size: self.size
+            valign: 'middle'
+        ScrollView:
+            size_hint: 1, 0.9
+            GridLayout:
+                id: symptom_layout
+                cols: 1
+                size_hint_y: None
+                height: self.minimum_height
+                spacing: 10
+                padding: 10
+
+
+<SummaryScreen>:
+    name: 'summary'
+    BoxLayout:
+        orientation: 'vertical'
+        Label:
+            text: 'Symptom Summary:'
+            size_hint_y: None
+            height: '48dp'
+        Label:
+            id: symptom_summary_label
+            text: ''
+            size_hint_y: None
+            height: '48dp'
+            text_size: self.size
+            valign: 'middle'
+        Label:
+            id: summary_label
+            text: "Summary"
+        BoxLayout:
+            id: plot_widget
+            size_hint_y: 1
+
