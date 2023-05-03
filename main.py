@@ -18,6 +18,8 @@ from kivy.properties import ObjectProperty, StringProperty
 from kivy.clock import Clock
 from garden_matplotlib.backend_kivyagg import FigureCanvasKivyAgg
 from math import pi
+from kivy.graphics import Color, Rectangle
+
 
 
 kivy.require('2.0.0')
@@ -275,7 +277,10 @@ class SymptomsScreen(Screen):
             app_instance.selected_symptoms[instance.text] = {"selected": False}
 
     def get_selected_symptoms(self):
-        return self.selected_symptoms
+        selected_symptoms = [symptom for symptom in self.symptoms if
+                             App.get_running_app().selected_symptoms[symptom]["selected"]]
+        print(f"Selected symptoms in SymptomsScreen.get_selected_symptoms: {selected_symptoms}")
+        return selected_symptoms
     def next_screen(self, *args):
         selected_symptoms = [symptom for symptom in self.symptoms if
                              App.get_running_app().selected_symptoms[symptom]["selected"]]
@@ -324,7 +329,8 @@ class FrequencyScreen(Screen):
         return self.symptom_frequencies
 
     def go_to_interference_screen(self, *args):
-        self.manager.get_screen('interference').populate_symptoms(self.symptom_frequencies)
+        selected_symptoms = self.manager.get_screen('symptoms').get_selected_symptoms()
+        self.manager.get_screen('interference').populate_symptoms(selected_symptoms)
         self.manager.current = 'interference'
 
 
@@ -337,9 +343,8 @@ class InterferenceScreen(Screen):
         self.add_widget(next_button)
 
     def on_enter(self, *args):
-        symptom_frequencies = self.manager.get_screen('frequency').get_symptom_frequencies()
         selected_symptoms = self.manager.get_screen('symptoms').get_selected_symptoms()
-        self.symptom_frequencies = symptom_frequencies
+        print(f"Selected symptoms in InterferenceScreen.on_enter: {selected_symptoms}")
         self.populate_symptoms(selected_symptoms)
 
     def on_interference_button_press(self, button):
@@ -347,15 +352,11 @@ class InterferenceScreen(Screen):
         interference = button.text
         self.symptom_frequencies[symptom] = {'interference': interference}
 
-    #def pre_enter(self, *args):
-    #    symptom_frequencies = self.manager.get_screen('frequency').get_symptom_frequencies()
-    #    selected_symptoms = self.manager.get_screen('symptoms').get_selected_symptoms()
-    #    self.symptom_frequencies = symptom_frequencies
-    #    self.populate_symptoms(selected_symptoms)
-
     def populate_symptoms(self, selected_symptoms):
+        print(f"Selected symptoms in InterferenceScreen.populate_symptoms: {selected_symptoms}")
         self.ids.symptom_layout.clear_widgets()
         for symptom in selected_symptoms:
+            print(f"Adding symptom: {symptom}")
             symptom_row = BoxLayout(orientation='horizontal', size_hint_y=None, height=170)
             symptom_label = Label(text=symptom, halign="left", valign="middle", size_hint_x=0.7, size_hint_y=None,
                                   height=170)
@@ -366,6 +367,7 @@ class InterferenceScreen(Screen):
                            'Intense enough that I notice it but can usually carry on without too much effort',
                            'Quite intense requiring real effort to carry on',
                            'So intense I have to stop what I\'m doing and seek relief']:
+                print(f"Adding option: {option}")
                 button = CustomToggleButton(text=option, group=symptom, size_hint_x=0.5, width=200, size_hint_y=None,
                                             height=150, font_size=28)
                 button.bind(on_press=self.on_interference_button_press)
@@ -381,9 +383,6 @@ class InterferenceScreen(Screen):
         summary_screen.symptom_frequencies = self.symptom_frequencies
         summary_screen.symptom_values = self.symptom_values  # Corrected line
         self.manager.current = 'summary'
-
-    def on_leave(self, *args):
-        self.ids.symptom_layout.clear_widgets()
 
 
 class SummaryScreen(Screen):
