@@ -281,9 +281,11 @@ class SymptomsScreen(Screen):
                              App.get_running_app().selected_symptoms[symptom]["selected"]]
         print(f"Selected symptoms in SymptomsScreen.get_selected_symptoms: {selected_symptoms}")
         return selected_symptoms
+
     def next_screen(self, *args):
         selected_symptoms = [symptom for symptom in self.symptoms if
                              App.get_running_app().selected_symptoms[symptom]["selected"]]
+        print(f"Selected symptoms: {selected_symptoms}")
         self.manager.get_screen('frequency').populate_symptoms(selected_symptoms)
         self.manager.current = 'frequency'
 
@@ -332,6 +334,7 @@ class FrequencyScreen(Screen):
         selected_symptoms = self.manager.get_screen('symptoms').get_selected_symptoms()
         self.manager.get_screen('interference').populate_symptoms(selected_symptoms)
         self.manager.current = 'interference'
+        print(f"Selected symptoms: {selected_symptoms}")
 
 
 class InterferenceScreen(Screen):
@@ -386,69 +389,56 @@ class InterferenceScreen(Screen):
 
 
 class SummaryScreen(Screen):
-    symptom_frequencies = ObjectProperty(None)
-    symptom_values = ObjectProperty(None)
+    def __init__(self, **kwargs):
+        super(SummaryScreen, self).__init__(**kwargs)
+        self.symptom_frequencies = {}
+        self.symptom_values = {}
 
-    def on_pre_enter(self, *args):
-        self.populate_summary(self.symptom_frequencies, self.symptom_values)
+    def on_enter(self, *args):
+        scores = self.calculate_scores()
+        self.plot_radar_chart(scores)
 
-    def populate_summary(self, symptom_frequencies, symptom_values):
-        symptom_scores = self.calculate_symptom_scores(symptom_frequencies, symptom_values)
+    class SummaryScreen(Screen):
+        def calculate_scores(self):
+            scores = {symptom: 0 for symptom in symptom_values.keys()}
+            for symptom, values in self.symptom_frequencies.items():
+                frequency = values['frequency']
+                interference = values['interference']
+                score_key = (symptom, frequency, interference)
+                if score_key in symptom_values:
+                    scores[symptom] = symptom_values[score_key]
+            return scores
 
-        # Convert the symptom_scores dictionary into two lists: labels and values
-        labels = list(symptom_scores.keys())
-        values = list(symptom_scores.values())
+    def plot_radar(self, scores):
+        # Number of variables (symptoms)
+        num_vars = 10
 
-        self.plot_radar(labels, values)
+        # Compute angle of each axis in the plot
+        angles = np.linspace(0, 2 * np.pi, num_vars, endpoint=False).tolist()
 
-    def calculate_symptom_scores(self, symptom_frequencies, symptom_values):
-        symptom_scores = {}
+        # Complete the loop by appending the first angle
+        angles += angles[:1]
 
-        for symptom, freq_interference in symptom_frequencies.items():
-            freq = freq_interference.get('frequency', 0)
-            interference = freq_interference.get('interference', 0)
-            value = symptom_values.get(symptom, {}).get(freq, {}).get(interference, 0)
-            symptom_scores[symptom] = value
+        # Initialize the plot
+        fig, ax = plt.subplots(subplot_kw=dict(polar=True))
 
-        return symptom_scores
+        # Arrange the data
+        values = list(scores.values())
+        values += values[:1]
 
-    def plot_radar(self, labels, values):
-        # Prepare the data for the radar plot
-        data = list(values)
+        # Plot the data
+        ax.plot(angles, values, linewidth=1, linestyle='solid')
 
-        # Convert data to a numpy array
-        data = np.array(data)
+        # Fill the area
+        ax.fill(angles, values, 'b', alpha=0.25)
 
-        # Convert data to percentages
-        data = data / data.sum() * 100
-
-        num_vars = len(labels)
-
-        angles = np.linspace(0, 2 * np.pi, num_vars, endpoint=False)
-        angles = angles.tolist()  # Explicitly convert angles to a list
-        data = np.append(data, data[0]).tolist()  # Convert data back to a list
-        angles.append(angles[0])  # Append the first angle value to the list
-
-        fig, ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
-
-        ax.fill(angles, data, color='blue', alpha=0.25)
-        ax.plot(angles, data, color='blue', linewidth=2, marker='o')
-
-        ax.set_yticklabels([])
-        ax.set_ylim(0, 100)
-
+        # Set the labels for each axis
         ax.set_xticks(angles[:-1])
-        ax.set_xticklabels(labels)
+        ax.set_xticklabels(list(scores.keys()))
 
-        plot_widget = self.ids.plot_widget
-        plot_widget.clear_widgets()
-
-        ax.margins(0.1)  # Add margins to the axes
-
-        # Set the aspect ratio to 'auto'
-        ax.set_aspect('auto')
-
-        plot_widget.add_widget(FigureCanvasKivyAgg(figure=fig))
+        # Display the plot in the SummaryScreen
+        plot = FigureCanvasKivyAgg(plt.gcf())
+        self.ids.plot_area.add_widget(plot)
 
 
 Builder.load_file('symptom.kv')

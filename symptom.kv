@@ -91,21 +91,12 @@
     name: 'summary'
     BoxLayout:
         orientation: 'vertical'
-        Label:
-            text: 'Symptom Summary:'
-            size_hint_y: None
-            height: '48dp'
-        Label:
-            id: symptom_summary_label
-            text: ''
-            size_hint_y: None
-            height: '48dp'
-            text_size: self.size
-            valign: 'middle'
-        Label:
-            id: summary_label
-            text: "Summary"
         BoxLayout:
-            id: plot_widget
-            size_hint_y: 1
+            id: plot_area
+            size_hint_y: 0.9
+        Button:
+            text: "Restart"
+            size_hint_y: 0.1
+            on_release: app.restart()
+
 
