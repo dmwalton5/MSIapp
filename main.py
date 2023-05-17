@@ -20,9 +20,20 @@ from garden_matplotlib.backend_kivyagg import FigureCanvasKivyAgg
 from math import pi
 from kivy.graphics import Color, Rectangle
 
-
-
 kivy.require('2.0.0')
+
+symptoms = [
+    "Sharp stabbing pain",
+    "General dull achiness",
+    "Stiffness or restricted movement",
+    "Weakness, clumsiness, or giving way",
+    "Sensitivity to certain odors, lights, noises, or temperatures",
+    "Numbness or pins and needles",
+    "Fatigue",
+    "Fogginess (difficulty concentrating or remembering things)",
+    "Nausea or poor appetite",
+    "Nervousness, anxiety, or sadness"
+]
 
 symptom_values = {
     'Sharp stabbing pain': {
@@ -65,7 +76,7 @@ symptom_values = {
             'So intense I have to stop what I\'m doing and seek relief': 12,
         },
     },
-    'Stiffness or restricted motion': {
+    'Stiffness or restricted movement': {
         'Rarely': {
             'Barely noticeable, doesn\'t really bother me': 1,
             'Intense enough that I notice it but can usually carry on without too much effort': 4,
@@ -247,18 +258,7 @@ class SymptomsScreen(Screen):
     def __init__(self, **kwargs):
         super(SymptomsScreen, self).__init__(**kwargs)
         self.selected_symptoms = []  # Initialize selected_symptoms here
-        self.symptoms = [
-            "Sharp stabbing pain",
-            "General dull achiness",
-            "Stiffness or restricted motion",
-            "Weakness, clumsiness, or giving way",
-            "Sensitivity to certain odors, lights, noises, or temperatures",
-            "Numbness or pins and needles",
-            "Fatigue",
-            "Fogginess (difficulty concentrating or remembering things)",
-            "Nausea or poor appetite",
-            "Nervousness, anxiety, or sadness"
-        ]
+        self.symptoms = symptoms
         next_button = Button(text="Next", on_release=self.next_screen, size_hint=(1, 0.1), pos_hint={'x': 0, 'y': 0})
         self.add_widget(next_button)
 
@@ -279,15 +279,16 @@ class SymptomsScreen(Screen):
     def get_selected_symptoms(self):
         selected_symptoms = [symptom for symptom in self.symptoms if
                              App.get_running_app().selected_symptoms[symptom]["selected"]]
-        print(f"Selected symptoms in SymptomsScreen.get_selected_symptoms: {selected_symptoms}")
+        print(f'selected_symptoms from SymptomsScreen: {selected_symptoms}')
         return selected_symptoms
 
     def next_screen(self, *args):
-        selected_symptoms = [symptom for symptom in self.symptoms if
-                             App.get_running_app().selected_symptoms[symptom]["selected"]]
-        print(f"Selected symptoms: {selected_symptoms}")
-        self.manager.get_screen('frequency').populate_symptoms(selected_symptoms)
+        selected_symptoms = self.get_selected_symptoms()
+        app = App.get_running_app()
+        app.selected_symptoms = selected_symptoms
+        # app.symptom_frequencies = {symptom: app.symptom_frequencies[symptom] for symptom in selected_symptoms}
         self.manager.current = 'frequency'
+        print(f'symptom_frequencies from SymptomsScreen: {app.symptom_frequencies}')
 
 
 class CustomToggleButton(ToggleButton):
@@ -309,7 +310,7 @@ class FrequencyScreen(Screen):
 
     def on_enter(self, *args):
         selected_symptoms = [symptom for symptom in self.manager.get_screen('symptoms').symptoms if
-                             App.get_running_app().selected_symptoms[symptom]["selected"]]
+                             symptom in App.get_running_app().selected_symptoms]
         self.populate_symptoms(selected_symptoms)
 
     def populate_symptoms(self, selected_symptoms):
@@ -331,10 +332,12 @@ class FrequencyScreen(Screen):
         return self.symptom_frequencies
 
     def go_to_interference_screen(self, *args):
-        selected_symptoms = self.manager.get_screen('symptoms').get_selected_symptoms()
-        self.manager.get_screen('interference').populate_symptoms(selected_symptoms)
+        app = App.get_running_app()
+        for symptom in app.selected_symptoms:
+            app.symptom_frequencies[symptom]['frequency'] = self.symptom_frequencies[symptom]['frequency']
         self.manager.current = 'interference'
-        print(f"Selected symptoms: {selected_symptoms}")
+        print(f'selected_symptoms after FrequencyScreen: {app.selected_symptoms}')
+        print(f'symptom_frequencies after FrequencyScreen: {app.symptom_frequencies}')
 
 
 class InterferenceScreen(Screen):
@@ -346,8 +349,8 @@ class InterferenceScreen(Screen):
         self.add_widget(next_button)
 
     def on_enter(self, *args):
-        selected_symptoms = self.manager.get_screen('symptoms').get_selected_symptoms()
-        print(f"Selected symptoms in InterferenceScreen.on_enter: {selected_symptoms}")
+        selected_symptoms = [symptom for symptom in App.get_running_app().selected_symptoms]
+        # print(f"Selected symptoms in InterferenceScreen.on_enter: {selected_symptoms}")
         self.populate_symptoms(selected_symptoms)
 
     def on_interference_button_press(self, button):
@@ -356,10 +359,10 @@ class InterferenceScreen(Screen):
         self.symptom_frequencies[symptom] = {'interference': interference}
 
     def populate_symptoms(self, selected_symptoms):
-        print(f"Selected symptoms in InterferenceScreen.populate_symptoms: {selected_symptoms}")
+        # print(f"Selected symptoms in InterferenceScreen.populate_symptoms: {selected_symptoms}")
         self.ids.symptom_layout.clear_widgets()
         for symptom in selected_symptoms:
-            print(f"Adding symptom: {symptom}")
+            # print(f"Adding symptom: {symptom}")
             symptom_row = BoxLayout(orientation='horizontal', size_hint_y=None, height=170)
             symptom_label = Label(text=symptom, halign="left", valign="middle", size_hint_x=0.7, size_hint_y=None,
                                   height=170)
@@ -370,7 +373,7 @@ class InterferenceScreen(Screen):
                            'Intense enough that I notice it but can usually carry on without too much effort',
                            'Quite intense requiring real effort to carry on',
                            'So intense I have to stop what I\'m doing and seek relief']:
-                print(f"Adding option: {option}")
+                # print(f"Adding option: {option}")
                 button = CustomToggleButton(text=option, group=symptom, size_hint_x=0.5, width=200, size_hint_y=None,
                                             height=150, font_size=28)
                 button.bind(on_press=self.on_interference_button_press)
@@ -382,32 +385,38 @@ class InterferenceScreen(Screen):
         return self.symptom_frequencies
 
     def go_to_summary_screen(self, *args):
-        summary_screen = self.manager.get_screen('summary')
-        summary_screen.symptom_frequencies = self.symptom_frequencies
-        summary_screen.symptom_values = self.symptom_values  # Corrected line
+        app = App.get_running_app()
+        for symptom in app.selected_symptoms:
+            app.symptom_frequencies[symptom]['interference'] = self.symptom_frequencies[symptom]['interference']
         self.manager.current = 'summary'
+        print(f'selected_symptoms after InterferenceScreen: {app.selected_symptoms}')
+        print(f'symptom_frequencies after InterferenceScreen: {app.symptom_frequencies}')
 
 
 class SummaryScreen(Screen):
     def __init__(self, **kwargs):
         super(SummaryScreen, self).__init__(**kwargs)
-        self.symptom_frequencies = {}
-        self.symptom_values = {}
+        restart_button = Button(text="Restart", size_hint=(1, 0.1), pos_hint={'x': 0, 'y': 0})
+        restart_button.bind(on_release=self.restart_app)
+        self.add_widget(restart_button)
 
     def on_enter(self, *args):
-        scores = self.calculate_scores()
-        self.plot_radar_chart(scores)
+        self.ids.plot_area.clear_widgets()  # clear any existing plots
+        app = App.get_running_app()
+        symptom_frequencies = app.symptom_frequencies
+        scores = self.calculate_scores(symptom_frequencies)
+        self.plot_radar(scores)
 
-    class SummaryScreen(Screen):
-        def calculate_scores(self):
-            scores = {symptom: 0 for symptom in symptom_values.keys()}
-            for symptom, values in self.symptom_frequencies.items():
-                frequency = values['frequency']
-                interference = values['interference']
-                score_key = (symptom, frequency, interference)
-                if score_key in symptom_values:
-                    scores[symptom] = symptom_values[score_key]
-            return scores
+    def calculate_scores(self, symptom_frequencies):
+        scores = {symptom: 0 for symptom in symptoms}
+        for symptom, values in symptom_frequencies.items():
+            frequency = values['frequency']
+            interference = values['interference']
+            if frequency != 'None' and interference != 'None':  # only if frequency and interference are not 'None'
+                scores[symptom] = symptom_values[symptom][frequency][interference]
+        print(f'symptom scores: {scores}')
+        return scores
+
 
     def plot_radar(self, scores):
         # Number of variables (symptoms)
@@ -421,6 +430,9 @@ class SummaryScreen(Screen):
 
         # Initialize the plot
         fig, ax = plt.subplots(subplot_kw=dict(polar=True))
+
+        # set y limit
+        ax.set_ylim(0, 12)
 
         # Arrange the data
         values = list(scores.values())
@@ -440,6 +452,12 @@ class SummaryScreen(Screen):
         plot = FigureCanvasKivyAgg(plt.gcf())
         self.ids.plot_area.add_widget(plot)
 
+    def restart_app(self, *args):
+        app = App.get_running_app()
+        app.selected_symptoms = {symptom: {"selected": False} for symptom in symptoms}
+        app.symptom_frequencies = {symptom: {"frequency": "None", "interference": "None"} for symptom in symptoms}
+        self.manager.current = 'symptoms'
+
 
 Builder.load_file('symptom.kv')
 
@@ -448,22 +466,12 @@ class MyApp(App):
     def __init__(self, **kwargs):
         super(MyApp, self).__init__(**kwargs)
         self.selected_symptoms = []
+        self.symptom_frequencies = {symptom: {'frequency': 'None', 'interference': 'None'} for symptom in symptoms}
 
     def build(self):
         self.selected_symptoms = {
-            symptom: {"selected": False} for symptom in [
-                "Sharp stabbing pain",
-                "General dull achiness",
-                "Stiffness or restricted motion",
-                "Weakness, clumsiness, or giving way",
-                "Sensitivity to certain odors, lights, noises, or temperatures",
-                "Numbness or pins and needles",
-                "Fatigue",
-                "Fogginess (difficulty concentrating or remembering things)",
-                "Nausea or poor appetite",
-                "Nervousness, anxiety, or sadness"
-            ]
-        }
+            symptom: {"selected": False} for symptom in symptoms
+            }
 
         sm = ScreenManager()
         sm.add_widget(SymptomsScreen(name='symptoms'))
